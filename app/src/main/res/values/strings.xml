@@ -1,0 +1,116 @@
+<resources>
+    <string name="app_name">Gizigo</string>
+    <string name="beranda">Beranda</string>
+    <string name="daftar_akun_baru">Daftar Akun Baru</string>
+    <string name="nama_lengkap">Nama Lengkap</string>
+    <string name="hint_nama_lengkap">Masukkan nama lengkap</string>
+    <string name="email">Email</string>
+    <string name="hint_email">contoh@email.com</string>
+    <string name="password">Password</string>
+    <string name="hint_password">Minimal 6 karakter</string>
+    <string name="konfirmasi_password">Konfirmasi Password</string>
+    <string name="hint_konfirmasi_password">Ulangi password</string>
+    <string name="daftar_sekarang">Daftar Sekarang</string>
+    <string name="sudah_punya_akun">Sudah punya akun? Masuk di sini</string>
+
+    <string name="masuk_ke_akun">Masuk ke Akun Anda</string>
+    <string name="masuk">Masuk</string>
+    <string name="belum_punya_akun">Belum punya akun? Daftar sekarang</string>
+    <string name="hint_masuk_password">Masukkan password</string>
+
+    <string name="selamat_datang">Selamat datang kembali,</string>
+    <string name="user_name">ella!</string>
+    <string name="cek_nutrisi">Cek Nutrisi</string>
+    <string name="resep">Resep</string>
+    <string name="olahraga">Olahraga</string>
+    <string name="tips_sehat">Tips Sehat!</string>
+    <string name="tips_content">Minum air putih minimal 8 gelas per hari untuk menjaga hidrasi tubuhmu!</string>
+    <string name="aktivitas_terakhir">Aktivitas Terakhir</string>
+    <string name="belum_ada_aktivitas">Belum ada aktivitas</string>
+    <string name="mulai_gizigo">Mulai gunakan fitur Gizigo untuk melihat riwayat aktivitasmu!</string>
+
+    <string name="halo_user_format">Halo, %1$s</string>
+    <string name="mulai_tracking">Mulai tracking makananmu hari ini</string>
+    <string name="capai_tubuh_ideal">Capai tubuh ideal dengan mencatat setiap nutrisi.</string>
+    <string name="tambah_makanan_action">+ Tambah Makanan</string>
+    <string name="nutrisi_hari_ini">Nutrisi Hari Ini</string>
+    <string name="protein_label">Protein</string>
+    <string name="karbo_label">Karbo</string>
+    <string name="lemak_label">Lemak</string>
+    <string name="sisa_target">Sisa Target</string>
+    <string name="kkal_remaining_format">%1$.0f kkal lagi</string>
+    <string name="belum_ada_makanan_tercatat">Belum ada makanan tercatat</string>
+    <string name="mulai_cari_makanan">Mulai dengan mencari makanan pertama kamu.</string>
+    <string name="cari_makanan_action">Cari Makanan</string>
+    <string name="light_bulb">Tips</string>
+    <string name="rincian_nutrisi">Rincian Nutrisi</string>
+
+    <string name="hai_sobat">Hai Sobat Gizigo, ella!</string>
+    <string name="bantu_hidup_sehat">Aku yang bakal bantu kamu menjalani hidup sehat! Bersama-sama kita akan:</string>
+    <string name="hitung_nutrisi">Menghitung nutrisi makananmu</string>
+    <string name="berbagi_resep">Berbagi resep sehat favoritmu</string>
+    <string name="temukan_olahraga">Menemukan olahraga yang tepat</string>
+    <string name="mulai_perjalanan">Mulai Perjalanan Sehat</string>
+
+    <string name="profil_saya">Profil Saya</string>
+    <string name="edit_profil">Edit Profil</string>
+    <string name="keluar_akun">Keluar dari Akun</string>
+    <string name="status">Status</string>
+    <string name="sobat_gizigo">Sobat Gizigo</string>
+
+    <string name="daftar_makanan">Daftar Makanan</string>
+    <string name="makanan_terpilih">Makanan Terpilih</string>
+    <string name="tambah">Tambah</string>
+    <string name="cari_makanan">Cari makanan...</string>
+    <string name="total_nutrisi">Total Nutrisi</string>
+    <string name="kalori">Kalori</string>
+    <string name="protein">Protein</string>
+    <string name="karbohidrat">Karbohidrat</string>
+    <string name="lemak">Lemak</string>
+    <string name="hapus">Hapus</string>
+
+    <string name="berbagi_resep_title">Berbagi Resep</string>
+    <string name="bagikan_resep_mu">Bagikan resep sehatmu</string>
+    <string name="tambah_resep_baru">Tambah Resep Baru</string>
+    <string name="nama_resep">Nama Resep</string>
+    <string name="waktu_masak">Waktu Masak</string>
+    <string name="porsi">Porsi</string>
+    <string name="bahan_bahan">Bahan-bahan</string>
+    <string name="cara_membuat">Cara Membuat</string>
+    <string name="bagikan_resep">Bagikan Resep</string>
+    <string name="batal">Batal</string>
+
+    <string name="video_olahraga">Video Olahraga</string>
+    <string name="video_pilihan">Video olahraga pilihan untuk kamu</string>
+    <string name="filter_video">Filter Video</string>
+    <string name="level">Level</string>
+    <string name="kategori">Kategori</string>
+    <string name="semua">Semua</string>
+    <string name="food_details_format">%1$d kal | P: %2$.1fg | C: %3$.1fg | F: %4$.1fg</string>
+    <string name="calories_format">%1$d kal</string>
+    <string name="by_author">oleh %1$s</string>
+    <string name="recipe_meta_format">%1$s | %2$s</string>
+    <string name="nutrition_value_format">%1$.1f</string>
+    <string name="nutrition_value_unit_format">%1$.1fg</string>
+
+    <string name="info_nutrisi_title">Hitung Nutrisi</string>
+    <string name="info_nutrisi_desc">Kadang kita lupa apa yang masuk ke tubuh kita. Jangan khawatir, Gizigo akan jadi asisten setiamu untuk menghitung setiap kalori dan nutrisi agar tubuhmu tetap prima dan penuh energi!</string>
+
+    <string name="info_resep_title">Berbagi Resep</string>
+    <string name="info_resep_desc">Makanan sehat tak harus membosankan! Temukan dan bagikan kreasi resep lezatmu dengan komunitas. Mari saling menginspirasi untuk hidup lebih sehat setiap hari!</string>
+
+    <string name="info_olahraga_title">Olahraga Tepat</string>
+    <string name="info_olahraga_desc">Bingung mulai dari mana? Kami carikan olahraga yang paling pas buat kamu. Konsistensi adalah kunci, dan Gizigo akan menemanimu di setiap langkah menuju versi terbaik dirimu!</string>
+
+    <string name="oke_siap">Oke, Siap!</string>
+
+    <string name="hint_food_name">Nama Makanan (misal: Nasi Goreng)</string>
+    <string name="category_food">Kategori Makanan</string>
+    <string name="portion_unit">Satuan Porsi</string>
+    <string name="quantity">Jumlah</string>
+    <string name="semua_makanan_hari_ini">Semua Makanan Hari Ini</string>
+    <string name="lihat_semua">Lihat Semua</string>
+
+    <!-- Placeholder for Google Sign-In, will be overridden by google-services.json -->
+    <string name="default_web_client_id">YOUR_WEB_CLIENT_ID_HERE</string>
+</resources>

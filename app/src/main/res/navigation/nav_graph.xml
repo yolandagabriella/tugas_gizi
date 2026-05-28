@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/navigation_login">
+
+    <fragment
+        android:id="@+id/navigation_login"
+        android:name="com.example.gizi.LoginFragment"
+        android:label="Login"
+        tools:layout="@layout/fragment_login">
+        <action
+            android:id="@+id/action_login_to_register"
+            app:destination="@id/navigation_register" />
+        <action
+            android:id="@+id/action_login_to_onboarding"
+            app:destination="@id/navigation_onboarding" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/navigation_register"
+        android:name="com.example.gizi.RegisterFragment"
+        android:label="Register"
+        tools:layout="@layout/fragment_register">
+        <action
+            android:id="@+id/action_register_to_login"
+            app:destination="@id/navigation_login" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/navigation_onboarding"
+        android:name="com.example.gizi.OnboardingFragment"
+        android:label="Welcome"
+        tools:layout="@layout/fragment_onboarding">
+        <action
+            android:id="@+id/action_onboarding_to_home"
+            app:destination="@id/navigation_home"
+            app:popUpTo="@id/nav_graph"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/navigation_home"
+        android:name="com.example.gizi.HomeFragment"
+        android:label="Beranda"
+        tools:layout="@layout/fragment_home" />
+
+    <fragment
+        android:id="@+id/navigation_nutrition"
+        android:name="com.example.gizi.NutritionFragment"
+        android:label="Cek Nutrisi"
+        tools:layout="@layout/fragment_nutrition" />
+
+    <fragment
+        android:id="@+id/navigation_exercise"
+        android:name="com.example.gizi.ExerciseFragment"
+        android:label="Olahraga"
+        tools:layout="@layout/fragment_exercise" />
+
+    <fragment
+        android:id="@+id/navigation_profile"
+        android:name="com.example.gizi.ProfileFragment"
+        android:label="Profil"
+        tools:layout="@layout/fragment_profile" />
+
+</navigation>

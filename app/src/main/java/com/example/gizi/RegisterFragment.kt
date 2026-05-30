@@ -80,14 +80,16 @@ class RegisterFragment : Fragment() {
                     db.collection("users").document(userId).set(userProfile)
                         .addOnSuccessListener {
                             if (!isAdded) return@addOnSuccessListener
-                            // 2. Simpan juga ke SharedPreferences (untuk sinkronisasi UI cepat)
+
+                            // ✅ clearData dulu, lalu simpan ke GIZI_PREFS
                             PrefsHelper.clearData(requireContext())
-                            val sharedPref = requireActivity().getSharedPreferences("GIZI_PREFS", Context.MODE_PRIVATE)
-                            sharedPref.edit {
-                                putString("user_name", name)
-                                putString("user_email", email)
-                            }
-                            
+                            requireActivity()
+                                .getSharedPreferences("GIZI_PREFS", Context.MODE_PRIVATE)
+                                .edit {
+                                    putString("user_name", name)
+                                    putString("user_email", email)
+                                }
+
                             Toast.makeText(requireContext(), "Registrasi Berhasil!", Toast.LENGTH_SHORT).show()
                             if (findNavController().currentDestination?.id == R.id.navigation_register) {
                                 findNavController().navigate(R.id.action_register_to_login)

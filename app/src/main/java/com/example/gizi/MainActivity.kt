@@ -47,6 +47,7 @@ class MainActivity : AppCompatActivity() {
                 R.id.navigation_login, 
                 R.id.navigation_register, 
                 R.id.navigation_onboarding,
+                R.id.navigation_onboarding_profile,
                 -> {
                     binding.bottomNav.isVisible = false
                 }

@@ -17,25 +17,31 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.firestore.FirebaseFirestore
 
 class LoginFragment : Fragment() {
     private var _binding: FragmentLoginBinding? = null
     private val binding get() = _binding!!
     private lateinit var auth: FirebaseAuth
+    private val db = FirebaseFirestore.getInstance()
 
-    private val googleSignInLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+    private val googleSignInLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
         val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
         try {
             val account = task.getResult(ApiException::class.java)!!
             firebaseAuthWithGoogle(account.idToken!!)
         } catch (e: ApiException) {
             if (isAdded) {
-                Toast.makeText(requireContext(), "Google Sign-In failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Google Sign-In gagal: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
+    ): View {
         _binding = FragmentLoginBinding.inflate(inflater, container, false)
         auth = FirebaseAuth.getInstance()
         return binding.root
@@ -43,7 +49,7 @@ class LoginFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        
+
         binding.btnLogin.setOnClickListener {
             val email = binding.etEmail.text.toString().trim()
             val password = binding.etPassword.text.toString().trim()
@@ -53,43 +59,93 @@ class LoginFragment : Fragment() {
                 return@setOnClickListener
             }
 
-            // Disable button to prevent double-click
             binding.btnLogin.isEnabled = false
 
-            // SELALU GUNAKAN FIREBASE AUTH UNTUK LOGIN
             auth.signInWithEmailAndPassword(email, password).addOnCompleteListener { task ->
-                // Check if fragment is still attached to activity
                 if (!isAdded) return@addOnCompleteListener
 
                 if (task.isSuccessful) {
-                    // Berhasil login ke Cloud, sekarang aman untuk simpan data
-                    PrefsHelper.clearData(requireContext())
-                    // Only navigate if we are still at the login screen
-                    if (findNavController().currentDestination?.id == R.id.navigation_login) {
-                        findNavController().navigate(R.id.action_login_to_onboarding)
+                    val user = auth.currentUser ?: run {
+                        binding.btnLogin.isEnabled = true
+                        return@addOnCompleteListener
                     }
+
+                    // ✅ Ambil nama dari Firestore, simpan ke GIZI_PREFS
+                    db.collection("users").document(user.uid).get()
+                        .addOnSuccessListener { document ->
+                            if (!isAdded) return@addOnSuccessListener
+                            val name = document.getString("name")
+                                ?: user.displayName
+                                ?: "User"
+                            val userEmail = document.getString("email")
+                                ?: user.email
+                                ?: ""
+                            saveUserAndNavigate(name, userEmail)
+                        }
+                        .addOnFailureListener {
+                            if (!isAdded) return@addOnFailureListener
+                            // Fallback ke data Auth kalau Firestore gagal
+                            saveUserAndNavigate(
+                                user.displayName ?: "User",
+                                user.email ?: ""
+                            )
+                        }
                 } else {
                     binding.btnLogin.isEnabled = true
-                    // Cek apakah ini akun lokal lama atau memang salah password
-                    val sharedPref = requireActivity().getSharedPreferences("GIZI_PREFS", Context.MODE_PRIVATE)
-                    val registeredEmail = sharedPref.getString("user_email", null)
-                    
-                    if (email == registeredEmail) {
-                        Toast.makeText(requireContext(), "Akun belum sinkron Cloud. Silakan Daftar Ulang agar UID aktif.", Toast.LENGTH_LONG).show()
-                    } else {
-                        Toast.makeText(requireContext(), "Gagal masuk: ${task.exception?.localizedMessage}", Toast.LENGTH_SHORT).show()
-                    }
+                    Toast.makeText(
+                        requireContext(),
+                        "Gagal masuk: ${task.exception?.localizedMessage}",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
         }
 
-        binding.btnGoogleSignIn.setOnClickListener {
-            signInWithGoogle()
-        }
+        binding.btnGoogleSignIn.setOnClickListener { signInWithGoogle() }
 
         binding.tvRegister.setOnClickListener {
             findNavController().navigate(R.id.action_login_to_register)
         }
+    }
+
+    private fun saveUserAndNavigate(name: String, email: String) {
+        PrefsHelper.clearData(requireContext())
+
+        requireActivity()
+            .getSharedPreferences("GIZI_PREFS", Context.MODE_PRIVATE)
+            .edit {
+                putString("user_name", name)
+                putString("user_email", email)
+            }
+
+        val currentDest = findNavController().currentDestination?.id
+        if (currentDest != R.id.navigation_login) return
+
+        // ✅ Cek onboarding berdasarkan UID di Firestore, bukan SharedPreferences lokal
+        val uid = auth.currentUser?.uid
+        if (uid == null) {
+            findNavController().navigate(R.id.action_login_to_home)
+            return
+        }
+
+        db.collection("users").document(uid).get()
+            .addOnSuccessListener { document ->
+                if (!isAdded) return@addOnSuccessListener
+                val onboardingDone = document.getBoolean("onboarding_done") ?: false
+                val currentDestNow = findNavController().currentDestination?.id
+                if (currentDestNow != R.id.navigation_login) return@addOnSuccessListener
+
+                when {
+                    !onboardingDone -> findNavController().navigate(R.id.action_login_to_onboarding_profile)
+                    else -> findNavController().navigate(R.id.action_login_to_home)
+                }
+            }
+            .addOnFailureListener {
+                if (!isAdded) return@addOnFailureListener
+                if (findNavController().currentDestination?.id == R.id.navigation_login) {
+                    findNavController().navigate(R.id.action_login_to_home)
+                }
+            }
     }
 
     private fun signInWithGoogle() {
@@ -97,28 +153,22 @@ class LoginFragment : Fragment() {
             .requestIdToken(getString(R.string.default_web_client_id))
             .requestEmail()
             .build()
-
-        val googleSignInClient = GoogleSignIn.getClient(requireActivity(), gso)
-        googleSignInLauncher.launch(googleSignInClient.signInIntent)
+        val client = GoogleSignIn.getClient(requireActivity(), gso)
+        googleSignInLauncher.launch(client.signInIntent)
     }
 
     private fun firebaseAuthWithGoogle(idToken: String) {
         val credential = GoogleAuthProvider.getCredential(idToken, null)
         auth.signInWithCredential(credential).addOnCompleteListener(requireActivity()) { task ->
             if (!isAdded) return@addOnCompleteListener
-
             if (task.isSuccessful) {
                 val user = auth.currentUser
-                val sharedPref = requireActivity().getSharedPreferences("GIZI_PREFS", Context.MODE_PRIVATE)
-                sharedPref.edit {
-                    putString("user_name", user?.displayName)
-                    putString("user_email", user?.email)
-                }
-                if (findNavController().currentDestination?.id == R.id.navigation_login) {
-                    findNavController().navigate(R.id.action_login_to_onboarding)
-                }
+                saveUserAndNavigate(
+                    user?.displayName ?: "User",
+                    user?.email ?: ""
+                )
             } else {
-                Toast.makeText(requireContext(), "Firebase Authentication failed.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Google login gagal.", Toast.LENGTH_SHORT).show()
             }
         }
     }

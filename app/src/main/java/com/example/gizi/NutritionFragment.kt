@@ -130,31 +130,47 @@ class NutritionFragment : Fragment() {
     }
 
     private fun saveCustomFood() {
-        val name = binding.etFoodName.text.toString()
+        val name = binding.etFoodName.text.toString().trim()
         val category = binding.spCategory.selectedItem.toString()
         val portionCount = binding.etPortionCount.text.toString().toDoubleOrNull() ?: 1.0
+        val gramInput = binding.etGramWeight.text.toString().toDoubleOrNull()
 
         if (name.isNotEmpty()) {
             val baseNutrients = when (category) {
-                "Makanan Pokok" -> arrayOf(175.0, 40.0, 4.0, 0.0)
-                "Lauk Pauk"     -> arrayOf(75.0, 0.0, 7.0, 5.0)
-                "Sayuran"       -> arrayOf(25.0, 5.0, 1.0, 0.0)
-                "Buah"          -> arrayOf(50.0, 12.0, 0.0, 0.0)
+                "Makanan Pokok" -> arrayOf(175.0, 40.0, 4.0, 0.0) // per porsi (~100g)
+                "Lauk Pauk"     -> arrayOf(75.0, 0.0, 7.0, 5.0)  // per porsi (~50g)
+                "Sayuran"       -> arrayOf(25.0, 5.0, 1.0, 0.0)  // per porsi (~100g)
+                "Buah"          -> arrayOf(50.0, 12.0, 0.0, 0.0) // per porsi (~100g)
                 else            -> arrayOf(0.0, 0.0, 0.0, 0.0)
             }
+
+            // Jika ada input gram, sesuaikan pengalinya (asumsi baseNutrients adalah untuk ~100g)
+            // Khusus Lauk Pauk asumsi porsi standar adalah 50g
+            val multiplier = if (gramInput != null) {
+                val baseWeight = if (category == "Lauk Pauk") 50.0 else 100.0
+                gramInput / baseWeight
+            } else {
+                portionCount
+            }
+
             val nutrients = listOf(
-                FoodNutrient("Energy",       baseNutrients[0] * portionCount, "kcal"),
-                FoodNutrient("Carbohydrate", baseNutrients[1] * portionCount, "g"),
-                FoodNutrient("Protein",      baseNutrients[2] * portionCount, "g"),
-                FoodNutrient("Total lipid",  baseNutrients[3] * portionCount, "g")
+                FoodNutrient("Energy",       baseNutrients[0] * multiplier, "kcal"),
+                FoodNutrient("Carbohydrate", baseNutrients[1] * multiplier, "g"),
+                FoodNutrient("Protein",      baseNutrients[2] * multiplier, "g"),
+                FoodNutrient("Total lipid",  baseNutrients[3] * multiplier, "g")
             )
+            
+            val foodNameWithWeight = if (gramInput != null) "$name (${gramInput.toInt()}g)" else name
+            
             viewModel.addFood(FoodItem(
                 fdcId = System.currentTimeMillis().toInt(),
-                description = name,
+                description = foodNameWithWeight,
                 foodNutrients = nutrients
             ))
+            
             binding.etFoodName.text.clear()
             binding.etPortionCount.setText("1")
+            binding.etGramWeight.text.clear()
             binding.cvAddFoodForm.isVisible = false
             Toast.makeText(requireContext(), "Makanan ditambahkan!", Toast.LENGTH_SHORT).show()
         } else {

@@ -130,6 +130,17 @@
                     </LinearLayout>
                 </LinearLayout>
 
+                <EditText
+                    android:id="@+id/et_gram_weight"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_edittext"
+                    android:hint="Sesuaikan gram (opsional)"
+                    android:inputType="number"
+                    android:paddingHorizontal="12dp"
+                    android:textSize="14sp" />
+
                 <Button
                     android:id="@+id/btn_save_food"
                     android:layout_width="match_parent"

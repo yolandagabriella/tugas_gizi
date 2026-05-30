@@ -31,6 +31,14 @@
             android:textColor="@color/text_gray"
             android:layout_marginTop="2dp"/>
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="* estimasi per porsi"
+            android:textSize="9sp"
+            android:textColor="@color/text_gray"
+            android:textStyle="italic" />
+
     </LinearLayout>
 
     <Button

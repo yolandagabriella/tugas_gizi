@@ -15,7 +15,19 @@
             app:destination="@id/navigation_register" />
         <action
             android:id="@+id/action_login_to_onboarding"
-            app:destination="@id/navigation_onboarding" />
+            app:destination="@id/navigation_onboarding"
+            app:popUpTo="@id/nav_graph"
+            app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_login_to_onboarding_profile"
+            app:destination="@id/navigation_onboarding_profile"
+            app:popUpTo="@id/nav_graph"
+            app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_login_to_home"
+            app:destination="@id/navigation_home"
+            app:popUpTo="@id/nav_graph"
+            app:popUpToInclusive="true" />
     </fragment>
 
     <fragment
@@ -37,6 +49,18 @@
             android:id="@+id/action_onboarding_to_home"
             app:destination="@id/navigation_home"
             app:popUpTo="@id/nav_graph"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/navigation_onboarding_profile"
+        android:name="com.example.gizi.OnboardingProfileFragment"
+        android:label="Lengkapi Profil"
+        tools:layout="@layout/fragment_onboarding_profile">
+        <action
+            android:id="@+id/action_onboarding_profile_to_onboarding_welcome"
+            app:destination="@id/navigation_onboarding"
+            app:popUpTo="@id/navigation_onboarding_profile"
             app:popUpToInclusive="true" />
     </fragment>
 

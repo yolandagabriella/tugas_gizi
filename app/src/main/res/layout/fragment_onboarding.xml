@@ -52,10 +52,12 @@
                 android:foreground="?attr/selectableItemBackground"
                 android:padding="16dp"
                 android:orientation="horizontal">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="🥗 " />
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_restaurant"
+                    app:tint="@color/primary_green" />
+                <View android:layout_width="8dp" android:layout_height="1dp" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -76,10 +78,12 @@
                 android:foreground="?attr/selectableItemBackground"
                 android:padding="16dp"
                 android:orientation="horizontal">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="💪 " />
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_fitness_center"
+                    app:tint="@color/primary_blue" />
+                <View android:layout_width="8dp" android:layout_height="1dp" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"

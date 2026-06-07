@@ -239,8 +239,9 @@
                             android:layout_height="wrap_content"
                             android:text="-- kkal"
                             android:textColor="@color/text_dark"
-                            android:textSize="18sp"
-                            android:textStyle="bold" />
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:gravity="center" />
                     </LinearLayout>
                 </LinearLayout>
 
@@ -250,23 +251,45 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:background="@color/purple_light"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
+                    android:orientation="vertical"
                     android:padding="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+                        <ImageView
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            android:src="@drawable/ic_target"
+                            app:tint="@color/text_gray" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:text="Tujuan: "
+                            android:textColor="@color/text_gray"
+                            android:textSize="13sp" />
+                        <TextView
+                            android:id="@+id/tv_tujuan_value"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Jaga Berat Badan"
+                            android:textColor="@color/text_dark"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <!-- Baris kedua: gender & usia -->
                     <TextView
+                        android:id="@+id/tv_gender_usia"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="🎯 Tujuan: "
+                        android:layout_marginStart="20dp"
+                        android:layout_marginTop="2dp"
                         android:textColor="@color/text_gray"
-                        android:textSize="13sp" />
-                    <TextView
-                        android:id="@+id/tv_tujuan_value"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Jaga Berat Badan"
-                        android:textColor="@color/text_dark"
-                        android:textSize="13sp"
-                        android:textStyle="bold" />
+                        android:textSize="11sp" />
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

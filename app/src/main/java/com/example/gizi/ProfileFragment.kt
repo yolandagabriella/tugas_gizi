@@ -8,6 +8,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.RadioButton
+import android.widget.RadioGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.isVisible
@@ -33,7 +34,9 @@ class ProfileFragment : Fragment() {
                 PrefsHelper.getBeratBadan(requireContext()),
                 PrefsHelper.getTinggiBadan(requireContext()),
                 PrefsHelper.getTujuan(requireContext()),
-                it.toString()
+                it.toString(),
+                PrefsHelper.getUsia(requireContext()),
+                PrefsHelper.getJenisKelamin(requireContext())
             )
             tampilkanFoto(it.toString())
         }
@@ -67,11 +70,16 @@ class ProfileFragment : Fragment() {
         val tinggi = PrefsHelper.getTinggiBadan(requireContext())
         val tujuan = PrefsHelper.getTujuan(requireContext())
         val target = PrefsHelper.getTargetKalori(requireContext())
+        
+        // Bonus: Kita bisa tampilkan usia dan gender di log atau UI jika ada
+        val usia = PrefsHelper.getUsia(requireContext())
+        val gender = PrefsHelper.getJenisKelamin(requireContext())
 
         binding.tvBeratValue.text = if (berat > 0) "${berat.toInt()} kg" else "-- kg"
         binding.tvTinggiValue.text = if (tinggi > 0) "${tinggi.toInt()} cm" else "-- cm"
         binding.tvTargetValue.text = if (target > 0) "$target kkal" else "-- kkal"
         binding.tvTujuanValue.text = tujuan
+        binding.tvGenderUsia.text = "$gender · $usia tahun"
 
         // Tampilkan foto kalau ada
         val fotoUri = PrefsHelper.getFotoProfil(requireContext())
@@ -122,6 +130,10 @@ class ProfileFragment : Fragment() {
 
         val etBerat = dialogView.findViewById<TextInputEditText>(R.id.et_edit_berat)
         val etTinggi = dialogView.findViewById<TextInputEditText>(R.id.et_edit_tinggi)
+        val etUsia = dialogView.findViewById<TextInputEditText>(R.id.et_edit_usia)
+        val rbLaki = dialogView.findViewById<RadioButton>(R.id.rb_edit_laki)
+        val rbPerempuan = dialogView.findViewById<RadioButton>(R.id.rb_edit_perempuan)
+        
         val rbTurun = dialogView.findViewById<RadioButton>(R.id.rb_edit_turun)
         val rbJaga = dialogView.findViewById<RadioButton>(R.id.rb_edit_jaga)
         val rbNaik = dialogView.findViewById<RadioButton>(R.id.rb_edit_naik)
@@ -129,10 +141,16 @@ class ProfileFragment : Fragment() {
         // Isi dengan data saat ini
         val beratSaatIni = PrefsHelper.getBeratBadan(requireContext())
         val tinggiSaatIni = PrefsHelper.getTinggiBadan(requireContext())
+        val usiaSaatIni = PrefsHelper.getUsia(requireContext())
+        val genderSaatIni = PrefsHelper.getJenisKelamin(requireContext())
         val tujuanSaatIni = PrefsHelper.getTujuan(requireContext())
 
         if (beratSaatIni > 0) etBerat.setText(beratSaatIni.toInt().toString())
         if (tinggiSaatIni > 0) etTinggi.setText(tinggiSaatIni.toInt().toString())
+        etUsia.setText(usiaSaatIni.toString())
+        
+        if (genderSaatIni == "Laki-laki") rbLaki.isChecked = true else rbPerempuan.isChecked = true
+
         when (tujuanSaatIni) {
             "Turun Berat Badan" -> rbTurun.isChecked = true
             "Naik Berat Badan"  -> rbNaik.isChecked = true
@@ -145,6 +163,9 @@ class ProfileFragment : Fragment() {
             .setPositiveButton("Simpan") { _, _ ->
                 val berat = etBerat.text.toString().toFloatOrNull()
                 val tinggi = etTinggi.text.toString().toFloatOrNull()
+                val usia = etUsia.text.toString().toIntOrNull() ?: usiaSaatIni
+                val gender = if (rbLaki.isChecked) "Laki-laki" else "Perempuan"
+                
                 val tujuan = when {
                     rbTurun.isChecked -> "Turun Berat Badan"
                     rbNaik.isChecked  -> "Naik Berat Badan"
@@ -157,7 +178,7 @@ class ProfileFragment : Fragment() {
                 }
 
                 val fotoUri = PrefsHelper.getFotoProfil(requireContext())
-                PrefsHelper.simpanProfil(requireContext(), berat, tinggi, tujuan, fotoUri)
+                PrefsHelper.simpanProfil(requireContext(), berat, tinggi, tujuan, fotoUri, usia, gender)
                 muatDataProfil()
                 Toast.makeText(requireContext(), "Profil diperbarui!", Toast.LENGTH_SHORT).show()
             }

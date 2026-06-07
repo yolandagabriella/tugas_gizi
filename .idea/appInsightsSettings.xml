@@ -7,14 +7,6 @@
         <entry key="Firebase Crashlytics">
           <value>
             <InsightsFilterSettings>
-              <option name="connection">
-                <ConnectionSetting>
-                  <option name="appId" value="com.example.gizi" />
-                  <option name="mobileSdkAppId" value="1:369303290310:android:7df4fc0fcfcced711eb2c7" />
-                  <option name="projectId" value="giziku-c8496" />
-                  <option name="projectNumber" value="369303290310" />
-                </ConnectionSetting>
-              </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />
               <option name="timeIntervalDays" value="THIRTY_DAYS" />
               <option name="visibilityType" value="ALL" />

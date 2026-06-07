@@ -118,34 +118,49 @@ class LoginFragment : Fragment() {
                 putString("user_email", email)
             }
 
-        val currentDest = findNavController().currentDestination?.id
-        if (currentDest != R.id.navigation_login) return
-
-        // ✅ Cek onboarding berdasarkan UID di Firestore, bukan SharedPreferences lokal
         val uid = auth.currentUser?.uid
         if (uid == null) {
-            findNavController().navigate(R.id.action_login_to_home)
+            navigateToHome()
             return
         }
 
         db.collection("users").document(uid).get()
             .addOnSuccessListener { document ->
                 if (!isAdded) return@addOnSuccessListener
-                val onboardingDone = document.getBoolean("onboarding_done") ?: false
-                val currentDestNow = findNavController().currentDestination?.id
-                if (currentDestNow != R.id.navigation_login) return@addOnSuccessListener
+
+                val onboardingDone = document.getBoolean("onboarding_done")
 
                 when {
-                    !onboardingDone -> findNavController().navigate(R.id.action_login_to_onboarding_profile)
-                    else -> findNavController().navigate(R.id.action_login_to_home)
+                    // onboarding_done = true → user lama → beranda
+                    onboardingDone == true -> navigateToHome()
+
+                    // onboarding_done = false → user baru yang baru daftar → isi data tubuh
+                    onboardingDone == false -> {
+                        if (findNavController().currentDestination?.id == R.id.navigation_login) {
+                            findNavController().navigate(R.id.action_login_to_onboarding_profile)
+                        }
+                    }
+
+                    // onboarding_done = null → user lama yang dokumennya belum ada field ini
+                    // → langsung set true dan ke beranda
+                    else -> {
+                        db.collection("users").document(uid)
+                            .update("onboarding_done", true)
+                        navigateToHome()
+                    }
                 }
             }
             .addOnFailureListener {
                 if (!isAdded) return@addOnFailureListener
-                if (findNavController().currentDestination?.id == R.id.navigation_login) {
-                    findNavController().navigate(R.id.action_login_to_home)
-                }
+                navigateToHome()
             }
+    }
+
+    private fun navigateToHome() {
+        if (!isAdded) return
+        if (findNavController().currentDestination?.id == R.id.navigation_login) {
+            findNavController().navigate(R.id.action_login_to_home)
+        }
     }
 
     private fun signInWithGoogle() {

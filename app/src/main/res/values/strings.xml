@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Gizigo</string>
     <string name="beranda">Beranda</string>
@@ -82,6 +83,7 @@
 
     <string name="video_olahraga">Video Olahraga</string>
     <string name="video_pilihan">Video olahraga pilihan untuk kamu</string>
+    <string name="exercise_subtitle">Pilih level dan kategori favoritmu</string>
     <string name="filter_video">Filter Video</string>
     <string name="level">Level</string>
     <string name="kategori">Kategori</string>
@@ -110,6 +112,14 @@
     <string name="quantity">Jumlah</string>
     <string name="semua_makanan_hari_ini">Semua Makanan Hari Ini</string>
     <string name="lihat_semua">Lihat Semua</string>
+
+    <string name="video_title_placeholder">Video Title</string>
+    <string name="level_beginner">Pemula</string>
+    <string name="category_yoga">Yoga</string>
+    <string name="watch_on_youtube">Tonton di YouTube</string>
+    <string name="video_thumbnail">Thumbnail Video</string>
+    <string name="play_icon">Tombol Putar</string>
+    <string name="memproses">Memproses...</string>
 
     <!-- Placeholder for Google Sign-In, will be overridden by google-services.json -->
     <string name="default_web_client_id">YOUR_WEB_CLIENT_ID_HERE</string>

@@ -20,6 +20,9 @@ class OnboardingProfileFragment : Fragment() {
     private var _binding: FragmentOnboardingProfileBinding? = null
     private val binding get() = _binding!!
 
+    private var tujuanDipilih = "jaga"
+    private var jenisKelaminDipilih = "Perempuan"
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
@@ -30,13 +33,15 @@ class OnboardingProfileFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Default pilih "Jaga Berat Badan"
         selectTujuan("jaga")
+        selectJenisKelamin("Perempuan")
 
-        // ✅ Klik card langsung pilih tujuan + ripple
         binding.cvTurun.setOnClickListener { selectTujuan("turun") }
         binding.cvJaga.setOnClickListener { selectTujuan("jaga") }
         binding.cvNaik.setOnClickListener { selectTujuan("naik") }
+
+        binding.cvLaki.setOnClickListener { selectJenisKelamin("Laki-laki") }
+        binding.cvPerempuan.setOnClickListener { selectJenisKelamin("Perempuan") }
 
         val watcher = object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {}
@@ -44,39 +49,60 @@ class OnboardingProfileFragment : Fragment() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 binding.cvPreviewKalori.isVisible = false
                 binding.btnMulai.isVisible = false
+                binding.tvCustomKaloriLabel.isVisible = false
+                binding.etCustomKalori.isVisible = false
             }
         }
         binding.etBerat.addTextChangedListener(watcher)
         binding.etTinggi.addTextChangedListener(watcher)
+        binding.etUsia.addTextChangedListener(watcher)
 
         binding.btnHitung.setOnClickListener { hitungKalori() }
         binding.btnMulai.setOnClickListener { simpanDanLanjut() }
     }
 
-    private var tujuanDipilih = "jaga"
+    private fun selectJenisKelamin(pilihan: String) {
+        jenisKelaminDipilih = pilihan
+        val green = resources.getColor(R.color.primary_green, null)
+        val border = resources.getColor(R.color.card_border, null)
+        
+        binding.cvLaki.setStrokeColor(if (pilihan == "Laki-laki") green else border)
+        binding.rbLaki.isChecked = (pilihan == "Laki-laki")
+        
+        binding.cvPerempuan.setStrokeColor(if (pilihan == "Perempuan") green else border)
+        binding.rbPerempuan.isChecked = (pilihan == "Perempuan")
+
+        // Reset preview
+        binding.cvPreviewKalori.isVisible = false
+        binding.btnMulai.isVisible = false
+        binding.tvCustomKaloriLabel.isVisible = false
+        binding.etCustomKalori.isVisible = false
+    }
 
     private fun selectTujuan(pilihan: String) {
         tujuanDipilih = pilihan
-
         val green = resources.getColor(R.color.primary_green, null)
         val border = resources.getColor(R.color.card_border, null)
-
+        
         binding.cvTurun.setStrokeColor(if (pilihan == "turun") green else border)
+        binding.rbTurun.isChecked = (pilihan == "turun")
+        
         binding.cvJaga.setStrokeColor(if (pilihan == "jaga") green else border)
+        binding.rbJaga.isChecked = (pilihan == "jaga")
+        
         binding.cvNaik.setStrokeColor(if (pilihan == "naik") green else border)
+        binding.rbNaik.isChecked = (pilihan == "naik")
 
-        binding.rbTurun.isChecked = pilihan == "turun"
-        binding.rbJaga.isChecked = pilihan == "jaga"
-        binding.rbNaik.isChecked = pilihan == "naik"
-
-        // Reset preview kalau ganti pilihan
         binding.cvPreviewKalori.isVisible = false
         binding.btnMulai.isVisible = false
+        binding.tvCustomKaloriLabel.isVisible = false
+        binding.etCustomKalori.isVisible = false
     }
 
     private fun hitungKalori() {
         val berat = binding.etBerat.text.toString().toFloatOrNull()
         val tinggi = binding.etTinggi.text.toString().toFloatOrNull()
+        val usia = binding.etUsia.text.toString().toIntOrNull()
 
         if (berat == null || berat <= 0) {
             binding.etBerat.error = "Masukkan berat badan yang valid"
@@ -86,9 +112,15 @@ class OnboardingProfileFragment : Fragment() {
             binding.etTinggi.error = "Masukkan tinggi badan yang valid"
             return
         }
+        if (usia == null || usia <= 0) {
+            binding.etUsia.error = "Masukkan usia yang valid"
+            return
+        }
 
         val tujuan = getTujuanDipilih()
-        val targetKalori = PrefsHelper.hitungTargetKalori(berat, tinggi, tujuan)
+        val targetKalori = PrefsHelper.hitungTargetKalori(
+            berat, tinggi, tujuan, usia, jenisKelaminDipilih
+        )
 
         binding.tvPreviewKalori.text = targetKalori.toString()
         binding.tvPreviewDesc.text = when (tujuan) {
@@ -98,16 +130,30 @@ class OnboardingProfileFragment : Fragment() {
         }
         binding.cvPreviewKalori.isVisible = true
         binding.btnMulai.isVisible = true
+        binding.tvCustomKaloriLabel.isVisible = true
+        binding.etCustomKalori.isVisible = true
+        binding.etCustomKalori.setText(targetKalori.toString())
     }
 
     private fun simpanDanLanjut() {
         val berat = binding.etBerat.text.toString().toFloatOrNull() ?: return
         val tinggi = binding.etTinggi.text.toString().toFloatOrNull() ?: return
+        val usia = binding.etUsia.text.toString().toIntOrNull() ?: 25
         val tujuan = getTujuanDipilih()
 
-        PrefsHelper.simpanProfil(requireContext(), berat, tinggi, tujuan)
+        val kaloriCustom = binding.etCustomKalori.text.toString().toIntOrNull()
+        val kaloriRekomendasi = PrefsHelper.hitungTargetKalori(
+            berat, tinggi, tujuan, usia, jenisKelaminDipilih
+        )
+        val targetFinal = if (kaloriCustom != null && kaloriCustom >= 1000) kaloriCustom else kaloriRekomendasi
 
-        // ✅ Simpan flag onboarding_done ke Firestore biar permanen
+        PrefsHelper.simpanProfil(
+            requireContext(), berat, tinggi, tujuan,
+            PrefsHelper.getFotoProfil(requireContext()),
+            usia, jenisKelaminDipilih
+        )
+        PrefsHelper.simpanTargetKalori(requireContext(), targetFinal)
+
         val uid = FirebaseAuth.getInstance().currentUser?.uid
         if (uid != null) {
             FirebaseFirestore.getInstance()
@@ -116,13 +162,7 @@ class OnboardingProfileFragment : Fragment() {
         }
 
         Toast.makeText(requireContext(), "Profil tersimpan!", Toast.LENGTH_SHORT).show()
-        
-        // Cek apakah action ini ada di nav_graph
-        try {
-            findNavController().navigate(R.id.action_onboarding_profile_to_onboarding_welcome)
-        } catch (_: Exception) {
-            findNavController().navigate(R.id.navigation_onboarding)
-        }
+        findNavController().navigate(R.id.action_onboarding_profile_to_onboarding_welcome)
     }
 
     private fun getTujuanDipilih(): String = when (tujuanDipilih) {

@@ -48,10 +48,15 @@ class NutritionFragment : Fragment() {
 
     private fun loadExistingData() {
         val ctx = requireContext()
+
+        // Load dari lokal dulu (cepat)
         val existingFoods = PrefsHelper.getFoodHistory(ctx)
         if (existingFoods.isNotEmpty()) {
             existingFoods.forEach { viewModel.addFood(it) }
         }
+
+        // Load dari Firestore (sinkron cloud)
+        viewModel.loadFromFirestore(ctx)
     }
 
     private fun setupSpinners() {
@@ -125,7 +130,7 @@ class NutritionFragment : Fragment() {
         binding.btnSimpanHarian.setOnClickListener {
             val ctx = requireContext()
             viewModel.simpanKaloriHarian(ctx)
-            Toast.makeText(ctx, "✅ Data nutrisi hari ini tersimpan!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(ctx, "Data nutrisi hari ini tersimpan!", Toast.LENGTH_SHORT).show()
         }
     }
 

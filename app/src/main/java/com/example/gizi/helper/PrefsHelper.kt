@@ -20,26 +20,39 @@ object PrefsHelper {
         beratBadan: Float,
         tinggiBadan: Float,
         tujuan: String,
-        fotoUri: String = ""
+        fotoUri: String = "",
+        usia: Int = 25,
+        jenisKelamin: String = "Perempuan"
     ) {
-        val targetKalori = hitungTargetKalori(beratBadan, tinggiBadan, tujuan)
+        val targetKalori = hitungTargetKalori(beratBadan, tinggiBadan, tujuan, usia, jenisKelamin)
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
             .putFloat("berat_badan", beratBadan)
             .putFloat("tinggi_badan", tinggiBadan)
             .putString("tujuan_kesehatan", tujuan)
             .putInt("target_kalori", targetKalori)
             .putString("foto_profil_uri", fotoUri)
+            .putInt("usia", usia)
+            .putString("jenis_kelamin", jenisKelamin)
             .apply()
     }
 
-    fun hitungTargetKalori(beratBadan: Float, tinggiBadan: Float, tujuan: String): Int {
-        // Rumus Harris-Benedict (asumsi aktivitas sedang, gender netral)
-        val bmr = (10 * beratBadan) + (6.25f * tinggiBadan) - 161
-        val tdee = bmr * 1.55f // aktivitas sedang
+    fun hitungTargetKalori(
+        beratBadan: Float,
+        tinggiBadan: Float,
+        tujuan: String,
+        usia: Int = 25,
+        jenisKelamin: String = "Perempuan"
+    ): Int {
+        val bmr = if (jenisKelamin == "Laki-laki") {
+            (10 * beratBadan) + (6.25f * tinggiBadan) - (5 * usia) + 5
+        } else {
+            (10 * beratBadan) + (6.25f * tinggiBadan) - (5 * usia) - 161
+        }
+        val tdee = bmr * 1.55f
         return when (tujuan) {
             "Turun Berat Badan" -> (tdee - 500).toInt().coerceAtLeast(1200)
             "Naik Berat Badan"  -> (tdee + 500).toInt()
-            else                -> tdee.toInt() // Jaga Berat Badan
+            else                -> tdee.toInt()
         }
     }
 
@@ -58,6 +71,14 @@ object PrefsHelper {
     fun getFotoProfil(context: Context): String =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .getString("foto_profil_uri", "") ?: ""
+
+    fun getUsia(context: Context): Int =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getInt("usia", 25)
+
+    fun getJenisKelamin(context: Context): String =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getString("jenis_kelamin", "Perempuan") ?: "Perempuan"
 
     fun isProfilLengkap(context: Context): Boolean =
         getBeratBadan(context) > 0f && getTinggiBadan(context) > 0f

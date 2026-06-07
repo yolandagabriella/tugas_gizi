@@ -61,7 +61,7 @@ class RegisterFragment : Fragment() {
 
             // Menampilkan loading state
             binding.btnRegister.isEnabled = false
-            binding.btnRegister.text = "Memproses..."
+            binding.btnRegister.text = getString(R.string.memproses)
 
             // --- PROSES REGISTRASI KE FIREBASE ---
             auth.createUserWithEmailAndPassword(email, password).addOnCompleteListener { task ->
@@ -74,7 +74,8 @@ class RegisterFragment : Fragment() {
                     val userProfile = hashMapOf(
                         "name" to name,
                         "email" to email,
-                        "createdAt" to System.currentTimeMillis()
+                        "createdAt" to System.currentTimeMillis(),
+                        "onboarding_done" to false
                     )
                     
                     db.collection("users").document(userId).set(userProfile)

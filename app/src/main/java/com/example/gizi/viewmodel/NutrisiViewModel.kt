@@ -11,14 +11,20 @@ import com.example.gizi.IndonesianFoodDatabase
 import com.example.gizi.api.RetrofitClient
 import com.example.gizi.helper.PrefsHelper
 import com.example.gizi.model.FoodItem
+import com.example.gizi.model.FoodNutrient
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class NutrisiViewModel : ViewModel() {
 
     private val apiKey = "uoHcRktqABRUv6t6qqVoETSyiot2vKHRdVsOMOh8"
-    private val db = FirebaseFirestore.getInstance() // Ini otomatis menembak database (default)
+    private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
 
     private val _searchResults = MutableLiveData<List<FoodItem>>()
@@ -37,6 +43,8 @@ class NutrisiViewModel : ViewModel() {
     val totalProtein: Double get() = _selectedFoods.value?.sumOf { it.getProtein() } ?: 0.0
     val totalKarbo: Double get() = _selectedFoods.value?.sumOf { it.getKarbohidrat() } ?: 0.0
     val totalLemak: Double get() = _selectedFoods.value?.sumOf { it.getLemak() } ?: 0.0
+
+    // ==================== SEARCH ====================
 
     fun searchFood(query: String) {
         if (query.isBlank()) return
@@ -77,6 +85,8 @@ class NutrisiViewModel : ViewModel() {
         }
     }
 
+    // ==================== SELECTED FOODS ====================
+
     fun addFood(food: FoodItem) {
         val currentList = _selectedFoods.value ?: mutableListOf()
         if (currentList.none { it.fdcId == food.fdcId }) {
@@ -91,54 +101,117 @@ class NutrisiViewModel : ViewModel() {
         _selectedFoods.value = currentList
     }
 
-    fun simpanKaloriHarian(context: Context) {
-        val user = auth.currentUser
-        val userId = user?.uid
+    // ==================== SIMPAN KE LOKAL + FIRESTORE ====================
 
-        Log.d("FIRESTORE_DEBUG", "Memulai proses simpan. UserID: $userId")
-        
-        if (userId == null) {
-            Log.e("FIRESTORE_DEBUG", "UserID NULL! User belum login ke Firebase.")
-            Toast.makeText(context, "❌ Error: Kamu belum login ke Cloud", Toast.LENGTH_LONG).show()
+    fun simpanKaloriHarian(context: Context) {
+        val uid = auth.currentUser?.uid
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val foods = _selectedFoods.value ?: emptyList()
+
+        // 1. Simpan lokal dulu (cepat, offline-friendly)
+        PrefsHelper.simpanKalori(
+            context,
+            totalKalori.toFloat(),
+            totalProtein.toFloat(),
+            totalKarbo.toFloat(),
+            totalLemak.toFloat(),
+            foods
+        )
+
+        Toast.makeText(context, "Data tersimpan!", Toast.LENGTH_SHORT).show()
+
+        // 2. Simpan ke Firestore (kalau login)
+        if (uid == null) {
+            Log.w("FIRESTORE", "User belum login, skip cloud sync")
             return
         }
 
-        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+        // Konversi list FoodItem ke format Map yang bisa disimpan Firestore
+        val makananList = foods.map { food ->
+            hashMapOf(
+                "fdcId" to food.fdcId,
+                "description" to food.description,
+                "kalori" to food.getKalori(),
+                "protein" to food.getProtein(),
+                "karbo" to food.getKarbohidrat(),
+                "lemak" to food.getLemak()
+            )
+        }
+
         val nutritionData = hashMapOf(
             "totalKalori" to totalKalori,
             "totalProtein" to totalProtein,
             "totalKarbo" to totalKarbo,
             "totalLemak" to totalLemak,
             "tanggal" to today,
-            "lastUpdate" to com.google.firebase.Timestamp.now(),
-            "makanan" to (_selectedFoods.value?.map { it.description } ?: emptyList()),
+            "lastUpdate" to Timestamp.now(),
+            "makanan" to makananList
         )
 
-        Log.d("FIRESTORE_DEBUG", "Data yang akan dikirim: $nutritionData")
-
-        // Agar dokumen User tidak 'abu-abu', kita update dulu dokumen induknya
-        db.collection("users").document(userId)
-            .update("lastSync", com.google.firebase.Timestamp.now())
-            .addOnFailureListener { 
-                // Jika gagal update (karena dokumen belum ada), kita create
-                db.collection("users").document(userId).set(hashMapOf("email" to user.email))
-            }
-
-        // SIMPAN KE SUB-COLLECTION HISTORY
-        db.collection("users").document(userId)
-            .collection("history").document(today)
-            .set(nutritionData)
+        db.collection("users").document(uid)
+            .collection("nutrition_logs").document(today)
+            .set(nutritionData, SetOptions.merge())
             .addOnSuccessListener {
-                Log.d("FIRESTORE_DEBUG", "✅ BERHASIL! Data muncul di Firestore untuk tanggal: $today")
-                Toast.makeText(context, "✅ Cloud Berhasil Sinkron!", Toast.LENGTH_SHORT).show()
+                Log.d("FIRESTORE", "Berhasil sync ke cloud: $today")
+                Toast.makeText(context, "Cloud tersinkron!", Toast.LENGTH_SHORT).show()
             }
             .addOnFailureListener { e ->
-                Log.e("FIRESTORE_DEBUG", "❌ GAGAL TOTAL: ${e.message}")
-                e.printStackTrace()
-                Toast.makeText(context, "❌ Gagal Cloud: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                Log.e("FIRESTORE", "Gagal sync: ${e.message}")
             }
+    }
 
-        // Simpan Lokal tetap jalan
-        PrefsHelper.simpanKalori(context, totalKalori.toFloat(), totalProtein.toFloat(), totalKarbo.toFloat(), totalLemak.toFloat(), _selectedFoods.value ?: emptyList())
+    // ==================== LOAD DARI FIRESTORE ====================
+
+    fun loadFromFirestore(context: Context) {
+        val uid = auth.currentUser?.uid ?: return
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+
+        db.collection("users").document(uid)
+            .collection("nutrition_logs").document(today)
+            .get()
+            .addOnSuccessListener { document ->
+                if (!document.exists()) return@addOnSuccessListener
+
+                // Parse makanan dari Firestore
+                @Suppress("UNCHECKED_CAST")
+                val makananRaw = document.get("makanan") as? List<Map<String, Any>> ?: return@addOnSuccessListener
+
+                val foods = makananRaw.map { map ->
+                    FoodItem(
+                        fdcId = (map["fdcId"] as? Long)?.toInt() ?: 0,
+                        description = map["description"] as? String ?: "",
+                        foodNutrients = listOf(
+                            FoodNutrient("Energy", (map["kalori"] as? Double) ?: 0.0, "kcal"),
+                            FoodNutrient("Protein", (map["protein"] as? Double) ?: 0.0, "g"),
+                            FoodNutrient("Carbohydrate", (map["karbo"] as? Double) ?: 0.0, "g"),
+                            FoodNutrient("Total lipid", (map["lemak"] as? Double) ?: 0.0, "g")
+                        )
+                    )
+                }
+
+                // Update ViewModel
+                val currentList = _selectedFoods.value ?: mutableListOf()
+                foods.forEach { food ->
+                    if (currentList.none { it.fdcId == food.fdcId }) {
+                        currentList.add(food)
+                    }
+                }
+                _selectedFoods.value = currentList
+
+                // Sync ke lokal juga
+                PrefsHelper.simpanKalori(
+                    context,
+                    (document.getDouble("totalKalori") ?: 0.0).toFloat(),
+                    (document.getDouble("totalProtein") ?: 0.0).toFloat(),
+                    (document.getDouble("totalKarbo") ?: 0.0).toFloat(),
+                    (document.getDouble("totalLemak") ?: 0.0).toFloat(),
+                    foods
+                )
+
+                Log.d("FIRESTORE", "Berhasil load ${foods.size} makanan dari cloud")
+            }
+            .addOnFailureListener { e ->
+                Log.e("FIRESTORE", "Gagal load dari cloud: ${e.message}")
+            }
     }
 }

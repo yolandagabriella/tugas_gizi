@@ -13,6 +13,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.gizi.databinding.FragmentHomeBinding
 import com.example.gizi.helper.PrefsHelper
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.bumptech.glide.Glide
 import java.util.Locale
 
 class HomeFragment : Fragment() {
@@ -55,6 +57,17 @@ class HomeFragment : Fragment() {
         binding.btnLihatSemua.setOnClickListener {
             showAllFoodBottomSheet()
         }
+        binding.btnResetKalori.setOnClickListener {
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Reset Data?")
+                .setMessage("Semua data makanan hari ini akan dihapus. Lanjutkan?")
+                .setPositiveButton("Reset") { _, _ ->
+                    PrefsHelper.clearData(requireContext())
+                    updateDashboard()
+                }
+                .setNegativeButton("Batal", null)
+                .show()
+        }
     }
 
     private fun showAllFoodBottomSheet() {
@@ -87,6 +100,21 @@ class HomeFragment : Fragment() {
         binding.tvUserGreeting.text = getString(R.string.halo_user_format, userName)
         binding.tvInitial.text = userName?.firstOrNull()?.toString()?.uppercase() ?: "G"
 
+        // Tampilkan foto profil kalau ada
+        val fotoUri = PrefsHelper.getFotoProfil(ctx)
+        if (fotoUri.isNotEmpty()) {
+            binding.ivFotoHome.isVisible = true
+            binding.tvInitial.isVisible = false
+            
+            Glide.with(this)
+                .load(if (fotoUri.startsWith("/")) java.io.File(fotoUri) else fotoUri)
+                .error(R.color.primary_green)
+                .into(binding.ivFotoHome)
+        } else {
+            binding.ivFotoHome.isVisible = false
+            binding.tvInitial.isVisible = true
+        }
+
         val kaloriHariIni = PrefsHelper.getKaloriHariIni(ctx)
         val targetKalori = PrefsHelper.getTargetKalori(ctx).toFloat()
         val protein = PrefsHelper.getProteinHariIni(ctx)
@@ -108,6 +136,7 @@ class HomeFragment : Fragment() {
             binding.cvHistoryOnboarding.isVisible = true
             binding.rvHistory.isVisible = false
             binding.btnLihatSemua.isVisible = false
+            binding.btnResetKalori.isVisible = false
         } else {
             // State BERISI
             binding.llEmptyData.isVisible = false
@@ -116,6 +145,7 @@ class HomeFragment : Fragment() {
             binding.llCalorieInfo.isVisible = true
             binding.cvHistoryOnboarding.isVisible = false
             binding.rvHistory.isVisible = true
+            binding.btnResetKalori.isVisible = true
 
             // Update angka kalori
             binding.tvCaloriesValue.text = String.format(Locale.getDefault(), "%.0f", kaloriHariIni)
@@ -126,9 +156,46 @@ class HomeFragment : Fragment() {
             val progress = (kaloriHariIni / targetKalori * 100).toInt()
             binding.pbCalories.progress = progress.coerceIn(0, 100)
 
-            // Warna progress: hijau kalau normal, merah kalau over
-            val color = if (kaloriHariIni > targetKalori) "#FF5252" else "#4CAF50"
+            // Warna berdasarkan progress
+            val color = when {
+                progress >= 100 -> "#4CAF50" // Hijau — target tercapai!
+                progress >= 90  -> "#FF9800" // Orange — hampir tercapai
+                progress >= 50  -> "#FFC107" // Kuning — setengah jalan
+                else            -> "#2196F3" // Biru — masih awal
+            }
             binding.pbCalories.progressDrawable.setTint(color.toColorInt())
+
+            // Cek status kalori
+            val sudahMelewati = kaloriHariIni > targetKalori
+            val sudahTercapai = kaloriHariIni >= targetKalori && kaloriHariIni <= targetKalori * 1.05f
+
+            when {
+                sudahTercapai -> {
+                    // Pop up selamat
+                    if (!PrefsHelper.isTargetPopupShown(requireContext())) {
+                        MaterialAlertDialogBuilder(requireContext())
+                            .setTitle("🎉 Selamat!")
+                            .setMessage("Kamu sudah mencapai target kalori harian kamu, Sobat Gizigo! Pertahankan terus ya!")
+                            .setPositiveButton("Yeay!") { _, _ ->
+                                PrefsHelper.setTargetPopupShown(requireContext(), true)
+                            }
+                            .show()
+                    }
+                }
+                sudahMelewati -> {
+                    // Pop up peringatan
+                    if (!PrefsHelper.isOverPopupShown(requireContext())) {
+                        val lebih = (kaloriHariIni - targetKalori).toInt()
+                        MaterialAlertDialogBuilder(requireContext())
+                            .setTitle("⚠️ Peringatan!")
+                            .setMessage("Kamu sudah melebihi target kalori sebanyak ${lebih} kkal hari ini! Coba kurangi porsi makan berikutnya ya!")
+                            .setPositiveButton("Oke, Mengerti") { _, _ ->
+                                PrefsHelper.setOverPopupShown(requireContext(), true)
+                            }
+                            .show()
+                    }
+                }
+            }
 
             // Tampilkan max 3 item saja di home
             val limitedHistory = if (foodHistory.size > 3) foodHistory.take(3) else foodHistory

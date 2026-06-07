@@ -6,8 +6,10 @@ import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Toast
+import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -17,6 +19,7 @@ import com.example.gizi.helper.PrefsHelper
 import com.example.gizi.model.FoodItem
 import com.example.gizi.model.FoodNutrient
 import com.example.gizi.viewmodel.NutrisiViewModel
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 class NutritionFragment : Fragment() {
 
@@ -38,25 +41,12 @@ class NutritionFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        loadExistingData() // Muat data yang sudah tersimpan hari ini
+        viewModel.initTarget(requireContext())
         setupSpinners()
         setupRecyclerViews()
         setupSearchBar()
         setupListeners()
         observeViewModel()
-    }
-
-    private fun loadExistingData() {
-        val ctx = requireContext()
-
-        // Load dari lokal dulu (cepat)
-        val existingFoods = PrefsHelper.getFoodHistory(ctx)
-        if (existingFoods.isNotEmpty()) {
-            existingFoods.forEach { viewModel.addFood(it) }
-        }
-
-        // Load dari Firestore (sinkron cloud)
-        viewModel.loadFromFirestore(ctx)
     }
 
     private fun setupSpinners() {
@@ -67,14 +57,90 @@ class NutritionFragment : Fragment() {
             categories,
         )
         val portionUnits = arrayOf(
-            "1 Piring/Centong", "1 Potong Sedang",
-            "1 Mangkok", "1 Buah Sedang", "1 Sendok Makan",
+            // Umum
+            "1 Porsi",
+            "1 Piring",
+            "1 Mangkok",
+            "1 Gelas",
+            "1 Cangkir",
+
+            // Makanan Pokok
+            "1 Centong Nasi",
+            "1 Lembar Roti",
+            "1 Bungkus Mie",
+
+            // Lauk & Protein
+            "1 Potong Sedang",
+            "1 Potong Besar",
+            "1 Butir Telur",
+            "1 Ekor Ikan",
+
+            // Sayuran & Buah
+            "1 Buah Sedang",
+            "1 Buah Besar",
+            "1 Ikat",
+            "1 Genggam",
+
+            // Minuman
+            "1 Botol (600ml)",
+            "1 Sachet",
+
+            // Takaran Kecil
+            "1 Sendok Makan",
+            "1 Sendok Teh",
+            "1 Bungkus Kecil",
         )
         binding.spPortionUnit.adapter = ArrayAdapter(
             requireContext(),
             android.R.layout.simple_spinner_dropdown_item,
             portionUnits,
         )
+
+        binding.spCategory.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, pos: Int, id: Long) {
+                val satuanDefault = when (pos) {
+                    0 -> 1  // Makanan Pokok → 1 Piring
+                    1 -> 8  // Lauk Pauk → 1 Potong Sedang
+                    2 -> 2  // Sayuran → 1 Mangkok
+                    3 -> 12 // Buah → 1 Buah Sedang
+                    else -> 0
+                }
+                binding.spPortionUnit.setSelection(satuanDefault)
+            }
+            override fun onNothingSelected(parent: AdapterView<*>) {}
+        }
+
+        binding.spPortionUnit.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, pos: Int, id: Long) {
+                // Isi gram default otomatis sesuai satuan porsi
+                val gramDefault = when (pos) {
+                    0  -> "250"  // 1 Porsi
+                    1  -> "200"  // 1 Piring
+                    2  -> "200"  // 1 Mangkok
+                    3  -> "200"  // 1 Gelas
+                    4  -> "150"  // 1 Cangkir
+                    5  -> "100"  // 1 Centong Nasi
+                    6  -> "30"   // 1 Lembar Roti
+                    7  -> "85"   // 1 Bungkus Mie
+                    8  -> "75"   // 1 Potong Sedang
+                    9  -> "150"  // 1 Potong Besar
+                    10 -> "60"   // 1 Butir Telur
+                    11 -> "200"  // 1 Ekor Ikan
+                    12 -> "100"  // 1 Buah Sedang
+                    13 -> "200"  // 1 Buah Besar
+                    14 -> "100"  // 1 Ikat
+                    15 -> "50"   // 1 Genggam
+                    16 -> "600"  // 1 Botol
+                    17 -> "25"   // 1 Sachet
+                    18 -> "15"   // 1 Sendok Makan
+                    19 -> "5"    // 1 Sendok Teh
+                    20 -> "50"   // 1 Bungkus Kecil
+                    else -> "100"
+                }
+                binding.etGramWeight.setText(gramDefault)
+            }
+            override fun onNothingSelected(parent: AdapterView<*>) {}
+        }
     }
 
     private fun setupRecyclerViews() {
@@ -129,9 +195,66 @@ class NutritionFragment : Fragment() {
 
         binding.btnSimpanHarian.setOnClickListener {
             val ctx = requireContext()
-            viewModel.simpanKaloriHarian(ctx)
-            Toast.makeText(ctx, "Data nutrisi hari ini tersimpan!", Toast.LENGTH_SHORT).show()
+            
+            // Cek kalau ga ada makanan yang ditambah
+            if (viewModel.selectedFoods.value.isNullOrEmpty()) {
+                MaterialAlertDialogBuilder(ctx)
+                    .setTitle("Oops!")
+                    .setMessage(getString(R.string.belum_tambah_makanan))
+                    .setPositiveButton("Oke") { _, _ -> }
+                    .show()
+                return@setOnClickListener
+            }
+
+            val kaloriTersimpan = PrefsHelper.getKaloriHariIni(ctx)
+            val totalSekarang = kaloriTersimpan + viewModel.totalKalori
+            val sisa = viewModel.targetKalori - totalSekarang
+
+            if (sisa < 0) {
+                val lebih = Math.abs(sisa.toInt())
+                MaterialAlertDialogBuilder(ctx)
+                    .setTitle("⚠️ Peringatan!")
+                    .setMessage(getString(R.string.yakin_simpan_lebih, lebih))
+                    .setPositiveButton("Simpan Tetap") { _, _ ->
+                        viewModel.simpanKaloriHarian(ctx)
+                        Toast.makeText(ctx, "Data nutrisi hari ini tersimpan!", Toast.LENGTH_SHORT).show()
+                    }
+                    .setNegativeButton("Batal, Kurangi Dulu", null)
+                    .show()
+            } else if (totalSekarang >= viewModel.targetKalori * 0.95) {
+                MaterialAlertDialogBuilder(ctx)
+                    .setTitle("🎉 Selamat!")
+                    .setMessage(getString(R.string.target_tercapai_congrats))
+                    .setPositiveButton("Simpan!") { _, _ ->
+                        viewModel.simpanKaloriHarian(ctx)
+                        Toast.makeText(ctx, "Data nutrisi hari ini tersimpan!", Toast.LENGTH_SHORT).show()
+                    }
+                    .show()
+            } else {
+                viewModel.simpanKaloriHarian(ctx)
+                Toast.makeText(ctx, "Data nutrisi hari ini tersimpan!", Toast.LENGTH_SHORT).show()
+            }
         }
+
+        binding.etGramWeight.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) {
+                if (s.toString().isNotEmpty()) {
+                    // Kalau gram diisi, disable satuan porsi & jumlah
+                    binding.spPortionUnit.isEnabled = false
+                    binding.spPortionUnit.alpha = 0.4f
+                    binding.etPortionCount.isEnabled = false
+                    binding.etPortionCount.alpha = 0.4f
+                } else {
+                    // Kalau gram dikosongkan, enable lagi
+                    binding.spPortionUnit.isEnabled = true
+                    binding.spPortionUnit.alpha = 1f
+                    binding.etPortionCount.isEnabled = true
+                    binding.etPortionCount.alpha = 1f
+                }
+            }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
     }
 
     private fun saveCustomFood() {
@@ -206,12 +329,45 @@ class NutritionFragment : Fragment() {
             selectedFoodAdapter.submitList(foods.toList())
             updateTotalNutrisiUI()
         }
+
+        viewModel.statusMessage.observe(viewLifecycleOwner) { pair ->
+            pair?.let { (message, isAchievement) ->
+                if (isAchievement) {
+                    MaterialAlertDialogBuilder(requireContext())
+                        .setTitle("Bagus Sekali! 🌟")
+                        .setMessage(message)
+                        .setPositiveButton("Reset & Mulai Baru") { _, _ ->
+                            viewModel.resetMakanan(requireContext())
+                        }
+                        .setNegativeButton("Lanjutkan") { _, _ ->
+                            viewModel.resetStatusMessage()
+                        }
+                        .show()
+                } else {
+                    Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
+                    viewModel.resetStatusMessage()
+                }
+            }
+        }
     }
 
     private fun updateTotalNutrisiUI() {
-        binding.tvTotalCalories.text = getString(
-            R.string.nutrition_value_format, viewModel.totalKalori
-        )
+        // Ambil kalori yang udah tersimpan di beranda
+        val kaloriTersimpan = PrefsHelper.getKaloriHariIni(requireContext())
+        // Tambah kalori dari makanan yang baru dipilih di sesi ini
+        val totalSekarang = kaloriTersimpan + viewModel.totalKalori
+        val sisa = viewModel.targetKalori - totalSekarang
+
+        if (sisa < 0) {
+            binding.tvCalorieLabel.text = getString(R.string.exceed_target)
+            binding.tvTotalCalories.text = getString(R.string.kkal_unit_format, Math.abs(sisa.toInt()))
+            binding.tvTotalCalories.setTextColor("#FF5252".toColorInt())
+        } else {
+            binding.tvCalorieLabel.text = getString(R.string.sisa_target_label)
+            binding.tvTotalCalories.text = getString(R.string.kkal_unit_format, sisa.toInt())
+            binding.tvTotalCalories.setTextColor("#FFFFFF".toColorInt())
+        }
+
         binding.tvTotalProtein.text = getString(
             R.string.nutrition_value_unit_format, viewModel.totalProtein
         )

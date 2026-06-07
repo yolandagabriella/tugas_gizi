@@ -120,6 +120,14 @@
     <string name="video_thumbnail">Thumbnail Video</string>
     <string name="play_icon">Tombol Putar</string>
     <string name="memproses">Memproses...</string>
+    <string name="calorie_target_format">Kalori (Target: %1$d)</string>
+    <string name="exceed_target">Melebihi Target</string>
+    <string name="sisa_target_label">Sisa Target</string>
+    <string name="kkal_unit_format">%1$d kkal</string>
+    <string name="hampir_target">🔔 Hampir mencapai target kalori harianmu!</string>
+    <string name="yakin_simpan_lebih">⚠️ Peringatan! Kamu melebihi target kalori sebanyak %1$d kkal! Yakin mau simpan?</string>
+    <string name="target_tercapai_congrats">🎉 Selamat! Kamu sudah mencapai target kalori harian kamu, Sobat Gizigo! Pertahankan terus ya!</string>
+    <string name="belum_tambah_makanan">Kamu belum menambahkan makanan apapun. Tambah makanan dulu ya!</string>
 
     <!-- Placeholder for Google Sign-In, will be overridden by google-services.json -->
     <string name="default_web_client_id">YOUR_WEB_CLIENT_ID_HERE</string>

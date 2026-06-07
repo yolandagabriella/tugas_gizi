@@ -136,7 +136,7 @@
                     android:layout_height="48dp"
                     android:layout_marginTop="12dp"
                     android:background="@drawable/bg_edittext"
-                    android:hint="Sesuaikan gram (opsional)"
+                    android:hint="Estimasi gram (bisa disesuaikan)"
                     android:inputType="number"
                     android:paddingHorizontal="12dp"
                     android:textSize="14sp" />
@@ -283,16 +283,17 @@
                                 android:layout_columnWeight="1"
                                 android:orientation="vertical">
                                 <TextView
+                                    android:id="@+id/tv_calorie_label"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="@string/kalori"
+                                    android:text="Sisa Target"
                                     android:textColor="@color/white"
                                     android:textSize="10sp" />
                                 <TextView
                                     android:id="@+id/tv_total_calories"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="0.0"
+                                    android:text="0 kkal"
                                     android:textColor="@color/white"
                                     android:textSize="18sp"
                                     android:textStyle="bold" />

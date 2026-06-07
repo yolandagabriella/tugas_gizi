@@ -6,11 +6,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.core.content.edit
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.gizi.databinding.FragmentRegisterBinding
-import com.example.gizi.helper.PrefsHelper
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.firestore.FirebaseFirestore
@@ -35,10 +33,6 @@ class RegisterFragment : Fragment() {
             val password = binding.etPassword.text.toString().trim()
             val confirmPassword = binding.etConfirmPassword.text.toString().trim()
 
-            // Reset errors
-            binding.tilPassword.error = null
-            binding.tilConfirmPassword.error = null
-
             if (name.isEmpty() || email.isEmpty() || password.isEmpty()) {
                 Toast.makeText(requireContext(), "Harap isi semua data", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
@@ -59,18 +53,15 @@ class RegisterFragment : Fragment() {
                 return@setOnClickListener
             }
 
-            // Menampilkan loading state
             binding.btnRegister.isEnabled = false
             binding.btnRegister.text = getString(R.string.memproses)
 
-            // --- PROSES REGISTRASI KE FIREBASE ---
             auth.createUserWithEmailAndPassword(email, password).addOnCompleteListener { task ->
                 if (!isAdded) return@addOnCompleteListener
 
                 if (task.isSuccessful) {
                     val userId = auth.currentUser?.uid ?: ""
                     
-                    // 1. Simpan Profil ke Firestore
                     val userProfile = hashMapOf(
                         "name" to name,
                         "email" to email,
@@ -82,34 +73,36 @@ class RegisterFragment : Fragment() {
                         .addOnSuccessListener {
                             if (!isAdded) return@addOnSuccessListener
 
-                            // ✅ clearData dulu, lalu simpan ke GIZI_PREFS
-                            PrefsHelper.clearData(requireContext())
-                            requireActivity()
-                                .getSharedPreferences("GIZI_PREFS", Context.MODE_PRIVATE)
-                                .edit {
-                                    putString("user_name", name)
-                                    putString("user_email", email)
-                                }
+                            // ✅ Simpan ke Prefs
+                            val prefs = requireActivity().getSharedPreferences("GIZI_PREFS", Context.MODE_PRIVATE)
+                            prefs.edit().apply {
+                                putString("user_name", name)
+                                putString("user_email", email)
+                                apply()
+                            }
 
                             Toast.makeText(requireContext(), "Registrasi Berhasil!", Toast.LENGTH_SHORT).show()
+                            
+                            // ✅ Logout otomatis agar user harus login manual (biar ga langsung masuk ke isi data)
+                            auth.signOut()
+
                             if (findNavController().currentDestination?.id == R.id.navigation_register) {
-                                findNavController().navigate(R.id.action_register_to_login)
+                                findNavController().navigate(R.id.navigation_login)
                             }
                         }
                         .addOnFailureListener { e ->
                             if (!isAdded) return@addOnFailureListener
                             binding.btnRegister.isEnabled = true
-                            binding.btnRegister.text = "Daftar Sekarang"
+                            binding.btnRegister.text = getString(R.string.daftar_sekarang)
                             Toast.makeText(requireContext(), "Gagal simpan data: ${e.message}", Toast.LENGTH_SHORT).show()
                         }
                 } else {
                     binding.btnRegister.isEnabled = true
-                    binding.btnRegister.text = "Daftar Sekarang"
+                    binding.btnRegister.text = getString(R.string.daftar_sekarang)
                     
                     val exception = task.exception
                     val errorMessage = when {
                         exception is FirebaseAuthUserCollisionException -> "Email sudah terdaftar. Gunakan email lain."
-                        exception?.message?.contains("configuration") == true -> "Error: Email/Password belum diaktifkan di Firebase Console."
                         exception?.message?.contains("network") == true -> "Error: Tidak ada koneksi internet."
                         else -> "Firebase Auth Error: ${exception?.localizedMessage}"
                     }

@@ -15,25 +15,25 @@ object PrefsHelper {
 
     // ==================== PROFIL ====================
 
-    fun simpanProfil(
-        context: Context,
-        beratBadan: Float,
+    fun hitungTargetKaloriDariTargetBerat(
+        beratSekarang: Float,
+        targetBerat: Float,
         tinggiBadan: Float,
-        tujuan: String,
-        fotoUri: String = "",
         usia: Int = 25,
         jenisKelamin: String = "Perempuan"
-    ) {
-        val targetKalori = hitungTargetKalori(beratBadan, tinggiBadan, tujuan, usia, jenisKelamin)
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
-            .putFloat("berat_badan", beratBadan)
-            .putFloat("tinggi_badan", tinggiBadan)
-            .putString("tujuan_kesehatan", tujuan)
-            .putInt("target_kalori", targetKalori)
-            .putString("foto_profil_uri", fotoUri)
-            .putInt("usia", usia)
-            .putString("jenis_kelamin", jenisKelamin)
-            .apply()
+    ): Int {
+        val bmr = if (jenisKelamin == "Laki-laki") {
+            (10 * beratSekarang) + (6.25f * tinggiBadan) - (5 * usia) + 5
+        } else {
+            (10 * beratSekarang) + (6.25f * tinggiBadan) - (5 * usia) - 161
+        }
+        val tdee = bmr * 1.55f
+
+        return when {
+            beratSekarang > targetBerat + 1f -> (tdee - 500).toInt().coerceAtLeast(1200) // turun
+            beratSekarang < targetBerat - 1f -> (tdee + 500).toInt()                     // naik
+            else                             -> tdee.toInt()                              // jaga
+        }
     }
 
     fun hitungTargetKalori(
@@ -54,6 +54,43 @@ object PrefsHelper {
             "Naik Berat Badan"  -> (tdee + 500).toInt()
             else                -> tdee.toInt()
         }
+    }
+
+    fun getTargetBerat(context: Context): Float =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getFloat("target_berat", 0f)
+
+    fun simpanTargetBerat(context: Context, targetBerat: Float) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+            .putFloat("target_berat", targetBerat)
+            .apply()
+    }
+
+    fun simpanProfil(
+        context: Context,
+        beratBadan: Float,
+        tinggiBadan: Float,
+        tujuan: String,
+        fotoUri: String = "",
+        usia: Int = 25,
+        jenisKelamin: String = "Perempuan",
+        targetBerat: Float = 0f
+    ) {
+        val targetKalori = if (targetBerat > 0f) {
+            hitungTargetKaloriDariTargetBerat(beratBadan, targetBerat, tinggiBadan, usia, jenisKelamin)
+        } else {
+            hitungTargetKalori(beratBadan, tinggiBadan, tujuan, usia, jenisKelamin)
+        }
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+            .putFloat("berat_badan", beratBadan)
+            .putFloat("tinggi_badan", tinggiBadan)
+            .putString("tujuan_kesehatan", tujuan)
+            .putInt("target_kalori", targetKalori)
+            .putString("foto_profil_uri", fotoUri)
+            .putInt("usia", usia)
+            .putString("jenis_kelamin", jenisKelamin)
+            .putFloat("target_berat", targetBerat)
+            .apply()
     }
 
     fun getBeratBadan(context: Context): Float =
@@ -158,6 +195,26 @@ object PrefsHelper {
             .apply()
     }
 
+    fun isTargetPopupShown(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getBoolean("target_popup_shown", false)
+
+    fun setTargetPopupShown(context: Context, shown: Boolean) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+            .putBoolean("target_popup_shown", shown)
+            .apply()
+    }
+
+    fun isOverPopupShown(context: Context): Boolean =
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getBoolean("over_popup_shown", false)
+
+    fun setOverPopupShown(context: Context, shown: Boolean) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+            .putBoolean("over_popup_shown", shown)
+            .apply()
+    }
+
     fun clearData(context: Context) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
             .remove("kalori_hari_ini")
@@ -166,6 +223,8 @@ object PrefsHelper {
             .remove("lemak_hari_ini")
             .remove("foods_history")
             .remove("tanggal_simpan")
+            .remove("target_popup_shown") // Reset popup
+            .remove("over_popup_shown")   // Reset popup
             .apply()
     }
 

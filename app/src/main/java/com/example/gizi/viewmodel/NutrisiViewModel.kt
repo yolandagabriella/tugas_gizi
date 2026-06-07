@@ -15,7 +15,6 @@ import com.example.gizi.model.FoodNutrient
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -38,6 +37,14 @@ class NutrisiViewModel : ViewModel() {
 
     private val _errorMessage = MutableLiveData<String?>()
     val errorMessage: LiveData<String?> = _errorMessage
+
+    private val _statusMessage = MutableLiveData<Pair<String, Boolean>?>() // message to isAchievement
+    val statusMessage: LiveData<Pair<String, Boolean>?> = _statusMessage
+
+    private val removedFoodIds = mutableSetOf<Int>()
+
+    var targetKalori: Int = 2000
+    private var savedKaloriSaatIni: Float = 0f
 
     val totalKalori: Double get() = _selectedFoods.value?.sumOf { it.getKalori() } ?: 0.0
     val totalProtein: Double get() = _selectedFoods.value?.sumOf { it.getProtein() } ?: 0.0
@@ -87,15 +94,78 @@ class NutrisiViewModel : ViewModel() {
 
     // ==================== SELECTED FOODS ====================
 
+    fun initTarget(context: Context) {
+        targetKalori = PrefsHelper.getTargetKalori(context)
+        savedKaloriSaatIni = PrefsHelper.getKaloriHariIni(context)
+    }
+
     fun addFood(food: FoodItem) {
+        // Cek kalau makanan ini pernah di-X, skip!
+        if (removedFoodIds.contains(food.fdcId)) return
+
         val currentList = _selectedFoods.value ?: mutableListOf()
-        if (currentList.none { it.fdcId == food.fdcId }) {
-            currentList.add(food)
-            _selectedFoods.value = currentList
+        val oldTotal = savedKaloriSaatIni + totalKalori
+        // Tambah timestamp biar fdcId unik walau makanan sama
+        val foodBaru = food.copy(fdcId = System.currentTimeMillis().toInt())
+        currentList.add(foodBaru)
+        _selectedFoods.value = currentList
+        checkCalorieStatus(oldTotal, savedKaloriSaatIni + totalKalori)
+    }
+
+    private fun checkCalorieStatus(oldTotal: Double, newTotal: Double) {
+        val target = targetKalori.toDouble()
+
+        when {
+            // Tepat mencapai target
+            newTotal >= target && oldTotal < target -> {
+                _statusMessage.value = Pair(
+                    "🎉 Selamat! Target kalori harianmu sudah tercapai!\nMau reset untuk memulai hari baru?",
+                    true
+                )
+            }
+            // Melebihi target
+            newTotal > target -> {
+                val lebih = (newTotal - target).toInt()
+                _statusMessage.value = Pair(
+                    "⚠️ Kamu sudah melebihi target kalori sebanyak $lebih kkal hari ini!",
+                    false
+                )
+            }
+            // Mendekati target (90%)
+            newTotal >= target * 0.9 && oldTotal < target * 0.9 -> {
+                _statusMessage.value = Pair(
+                    "🔔 Hampir mencapai target kalori harianmu!",
+                    false
+                )
+            }
         }
     }
 
+    fun resetMakanan(context: Context) {
+        val uid = auth.currentUser?.uid
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+
+        _selectedFoods.value = mutableListOf()
+        removedFoodIds.clear() // Reset juga daftar yang dihapus
+        PrefsHelper.clearData(context)
+        _statusMessage.value = null
+
+        // Reset di Firestore juga
+        uid?.let {
+            db.collection("users").document(it)
+                .collection("nutrition_logs").document(today)
+                .delete()
+        }
+    }
+
+    fun resetStatusMessage() {
+        _statusMessage.value = null
+    }
+
     fun removeFood(food: FoodItem) {
+        // Simpan id makanan yang dihapus
+        removedFoodIds.add(food.fdcId)
+
         val currentList = _selectedFoods.value ?: mutableListOf()
         currentList.remove(food)
         _selectedFoods.value = currentList
@@ -106,28 +176,40 @@ class NutrisiViewModel : ViewModel() {
     fun simpanKaloriHarian(context: Context) {
         val uid = auth.currentUser?.uid
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-        val foods = _selectedFoods.value ?: emptyList()
+        
+        // 1. Ambil data lama
+        val oldKalori = PrefsHelper.getKaloriHariIni(context)
+        val oldProtein = PrefsHelper.getProteinHariIni(context)
+        val oldKarbo = PrefsHelper.getKarboHariIni(context)
+        val oldLemak = PrefsHelper.getLemakHariIni(context)
+        val oldFoods = PrefsHelper.getFoodHistory(context).toMutableList()
 
-        // 1. Simpan lokal dulu (cepat, offline-friendly)
+        // 2. Gabungkan dengan data baru
+        val currentSessionFoods = _selectedFoods.value ?: emptyList()
+        val newTotalKalori = oldKalori + totalKalori.toFloat()
+        val newTotalProtein = oldProtein + totalProtein.toFloat()
+        val newTotalKarbo = oldKarbo + totalKarbo.toFloat()
+        val newTotalLemak = oldLemak + totalLemak.toFloat()
+        oldFoods.addAll(currentSessionFoods)
+
+        // 3. Simpan akumulasi
         PrefsHelper.simpanKalori(
             context,
-            totalKalori.toFloat(),
-            totalProtein.toFloat(),
-            totalKarbo.toFloat(),
-            totalLemak.toFloat(),
-            foods
+            newTotalKalori,
+            newTotalProtein,
+            newTotalKarbo,
+            newTotalLemak,
+            oldFoods
         )
 
-        Toast.makeText(context, "Data tersimpan!", Toast.LENGTH_SHORT).show()
+        // Reset list di UI biar ga double
+        _selectedFoods.value = mutableListOf()
+        savedKaloriSaatIni = newTotalKalori
 
-        // 2. Simpan ke Firestore (kalau login)
-        if (uid == null) {
-            Log.w("FIRESTORE", "User belum login, skip cloud sync")
-            return
-        }
+        if (uid == null) return
 
-        // Konversi list FoodItem ke format Map yang bisa disimpan Firestore
-        val makananList = foods.map { food ->
+        // Konversi list FoodItem ke format Map
+        val makananList = oldFoods.map { food ->
             hashMapOf(
                 "fdcId" to food.fdcId,
                 "description" to food.description,
@@ -139,10 +221,10 @@ class NutrisiViewModel : ViewModel() {
         }
 
         val nutritionData = hashMapOf(
-            "totalKalori" to totalKalori,
-            "totalProtein" to totalProtein,
-            "totalKarbo" to totalKarbo,
-            "totalLemak" to totalLemak,
+            "totalKalori" to newTotalKalori,
+            "totalProtein" to newTotalProtein,
+            "totalKarbo" to newTotalKarbo,
+            "totalLemak" to newTotalLemak,
             "tanggal" to today,
             "lastUpdate" to Timestamp.now(),
             "makanan" to makananList
@@ -150,10 +232,9 @@ class NutrisiViewModel : ViewModel() {
 
         db.collection("users").document(uid)
             .collection("nutrition_logs").document(today)
-            .set(nutritionData, SetOptions.merge())
+            .set(nutritionData)
             .addOnSuccessListener {
                 Log.d("FIRESTORE", "Berhasil sync ke cloud: $today")
-                Toast.makeText(context, "Cloud tersinkron!", Toast.LENGTH_SHORT).show()
             }
             .addOnFailureListener { e ->
                 Log.e("FIRESTORE", "Gagal sync: ${e.message}")

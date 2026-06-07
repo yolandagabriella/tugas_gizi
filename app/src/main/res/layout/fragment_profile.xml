@@ -212,7 +212,34 @@
                             android:layout_height="wrap_content"
                             android:text="-- cm"
                             android:textColor="@color/text_dark"
-                            android:textSize="18sp"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <View android:layout_width="8dp" android:layout_height="1dp" />
+
+                    <!-- Target Berat -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:background="@color/orange_light"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:padding="12dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Target"
+                            android:textColor="@color/text_gray"
+                            android:textSize="11sp" />
+                        <TextView
+                            android:id="@+id/tv_target_berat_value"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="-- kg"
+                            android:textColor="@color/text_dark"
+                            android:textSize="16sp"
                             android:textStyle="bold" />
                     </LinearLayout>
 
@@ -230,7 +257,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Target"
+                            android:text="Kalori"
                             android:textColor="@color/text_gray"
                             android:textSize="11sp" />
                         <TextView

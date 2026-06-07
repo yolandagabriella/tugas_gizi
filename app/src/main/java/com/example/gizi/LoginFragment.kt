@@ -7,7 +7,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.edit
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.gizi.databinding.FragmentLoginBinding
@@ -50,6 +49,12 @@ class LoginFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // ✅ Cek auto-login (Tetap Login jika aplikasi cuma ditutup)
+        val currentUser = auth.currentUser
+        if (currentUser != null) {
+            checkOnboardingAndNavigate(currentUser.uid)
+        }
+
         binding.btnLogin.setOnClickListener {
             val email = binding.etEmail.text.toString().trim()
             val password = binding.etPassword.text.toString().trim()
@@ -65,31 +70,10 @@ class LoginFragment : Fragment() {
                 if (!isAdded) return@addOnCompleteListener
 
                 if (task.isSuccessful) {
-                    val user = auth.currentUser ?: run {
-                        binding.btnLogin.isEnabled = true
-                        return@addOnCompleteListener
+                    val user = auth.currentUser
+                    if (user != null) {
+                        fetchUserDataAndNavigate(user.uid, user.displayName, user.email)
                     }
-
-                    // ✅ Ambil nama dari Firestore, simpan ke GIZI_PREFS
-                    db.collection("users").document(user.uid).get()
-                        .addOnSuccessListener { document ->
-                            if (!isAdded) return@addOnSuccessListener
-                            val name = document.getString("name")
-                                ?: user.displayName
-                                ?: "User"
-                            val userEmail = document.getString("email")
-                                ?: user.email
-                                ?: ""
-                            saveUserAndNavigate(name, userEmail)
-                        }
-                        .addOnFailureListener {
-                            if (!isAdded) return@addOnFailureListener
-                            // Fallback ke data Auth kalau Firestore gagal
-                            saveUserAndNavigate(
-                                user.displayName ?: "User",
-                                user.email ?: ""
-                            )
-                        }
                 } else {
                     binding.btnLogin.isEnabled = true
                     Toast.makeText(
@@ -108,52 +92,94 @@ class LoginFragment : Fragment() {
         }
     }
 
-    private fun saveUserAndNavigate(name: String, email: String) {
-        PrefsHelper.clearData(requireContext())
-
-        requireActivity()
-            .getSharedPreferences("GIZI_PREFS", Context.MODE_PRIVATE)
-            .edit {
-                putString("user_name", name)
-                putString("user_email", email)
-            }
-
-        val uid = auth.currentUser?.uid
-        if (uid == null) {
-            navigateToHome()
-            return
-        }
-
+    private fun fetchUserDataAndNavigate(uid: String, fallbackName: String?, fallbackEmail: String?) {
         db.collection("users").document(uid).get()
             .addOnSuccessListener { document ->
                 if (!isAdded) return@addOnSuccessListener
+                
+                val name = document.getString("name") ?: fallbackName ?: "User"
+                val email = document.getString("email") ?: fallbackEmail ?: ""
+                
+                // ✅ Tarik data tubuh dari Firestore agar tidak hilang saat login ulang
+                val berat = document.getDouble("berat_badan")?.toFloat() ?: 0f
+                val tinggi = document.getDouble("tinggi_badan")?.toFloat() ?: 0f
+                val tujuan = document.getString("tujuan_kesehatan") ?: "Jaga Berat Badan"
+                val usia = document.getLong("usia")?.toInt() ?: 25
+                val gender = document.getString("jenis_kelamin") ?: "Perempuan"
+                val targetBerat = document.getDouble("target_berat")?.toFloat() ?: 0f
+
+                // ✅ Simpan semua ke Prefs lokal
+                if (berat > 0f) {
+                    PrefsHelper.simpanProfil(requireContext(), berat, tinggi, tujuan, "", usia, gender, targetBerat)
+                }
+
+                requireActivity().getSharedPreferences("GIZI_PREFS", Context.MODE_PRIVATE).edit().apply {
+                    putString("user_name", name)
+                    putString("user_email", email)
+                    apply()
+                }
 
                 val onboardingDone = document.getBoolean("onboarding_done")
-
-                when {
-                    // onboarding_done = true → user lama → beranda
-                    onboardingDone == true -> navigateToHome()
-
-                    // onboarding_done = false → user baru yang baru daftar → isi data tubuh
-                    onboardingDone == false -> {
-                        if (findNavController().currentDestination?.id == R.id.navigation_login) {
-                            findNavController().navigate(R.id.action_login_to_onboarding_profile)
-                        }
-                    }
-
-                    // onboarding_done = null → user lama yang dokumennya belum ada field ini
-                    // → langsung set true dan ke beranda
-                    else -> {
-                        db.collection("users").document(uid)
-                            .update("onboarding_done", true)
-                        navigateToHome()
-                    }
-                }
+                handleNavigation(onboardingDone, uid)
             }
             .addOnFailureListener {
-                if (!isAdded) return@addOnFailureListener
+                if (isAdded) {
+                    binding.btnLogin.isEnabled = true
+                    Toast.makeText(requireContext(), "Gagal mengambil data profil.", Toast.LENGTH_SHORT).show()
+                }
+            }
+    }
+
+    private fun checkOnboardingAndNavigate(uid: String) {
+        db.collection("users").document(uid).get()
+            .addOnSuccessListener { document ->
+                if (!isAdded) return@addOnSuccessListener
+                
+                // Pastikan data lokal terisi walau auto-login
+                val name = document.getString("name") ?: "User"
+                val email = document.getString("email") ?: ""
+                val berat = document.getDouble("berat_badan")?.toFloat() ?: 0f
+                val tinggi = document.getDouble("tinggi_badan")?.toFloat() ?: 0f
+                val tujuan = document.getString("tujuan_kesehatan") ?: "Jaga Berat Badan"
+                val usia = document.getLong("usia")?.toInt() ?: 25
+                val gender = document.getString("jenis_kelamin") ?: "Perempuan"
+                val targetBerat = document.getDouble("target_berat")?.toFloat() ?: 0f
+
+                if (berat > 0f) {
+                    PrefsHelper.simpanProfil(requireContext(), berat, tinggi, tujuan, "", usia, gender, targetBerat)
+                }
+
+                requireActivity().getSharedPreferences("GIZI_PREFS", Context.MODE_PRIVATE).edit().apply {
+                    putString("user_name", name)
+                    putString("user_email", email)
+                    apply()
+                }
+
+                val onboardingDone = document.getBoolean("onboarding_done")
+                handleNavigation(onboardingDone, uid)
+            }
+            .addOnFailureListener {
+                if (isAdded) navigateToHome()
+            }
+    }
+
+    private fun handleNavigation(onboardingDone: Boolean?, uid: String) {
+        if (!isAdded) return
+        
+        when (onboardingDone) {
+            true -> navigateToHome()
+            false -> {
+                // User baru -> harus isi data tubuh
+                if (findNavController().currentDestination?.id == R.id.navigation_login) {
+                    findNavController().navigate(R.id.action_login_to_onboarding_profile)
+                }
+            }
+            else -> {
+                // User lama atau field belum ada -> anggap sudah pernah isi data tubuh (biar ga pusing)
+                db.collection("users").document(uid).update("onboarding_done", true)
                 navigateToHome()
             }
+        }
     }
 
     private fun navigateToHome() {
@@ -178,10 +204,9 @@ class LoginFragment : Fragment() {
             if (!isAdded) return@addOnCompleteListener
             if (task.isSuccessful) {
                 val user = auth.currentUser
-                saveUserAndNavigate(
-                    user?.displayName ?: "User",
-                    user?.email ?: ""
-                )
+                if (user != null) {
+                    fetchUserDataAndNavigate(user.uid, user.displayName, user.email)
+                }
             } else {
                 Toast.makeText(requireContext(), "Google login gagal.", Toast.LENGTH_SHORT).show()
             }

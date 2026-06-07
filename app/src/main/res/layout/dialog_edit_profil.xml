@@ -39,6 +39,19 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
+            android:hint="Target Berat Badan (kg)"
+            app:hintEnabled="true">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_edit_target_berat"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="numberDecimal" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
             android:hint="Usia (tahun)"
             app:hintEnabled="true">
             <com.google.android.material.textfield.TextInputEditText

@@ -253,9 +253,9 @@ class NutrisiViewModel : ViewModel() {
             .addOnSuccessListener { document ->
                 if (!document.exists()) return@addOnSuccessListener
 
-                // Parse makanan dari Firestore
                 @Suppress("UNCHECKED_CAST")
-                val makananRaw = document.get("makanan") as? List<Map<String, Any>> ?: return@addOnSuccessListener
+                val makananRaw = document.get("makanan") as? List<Map<String, Any>>
+                    ?: return@addOnSuccessListener
 
                 val foods = makananRaw.map { map ->
                     FoodItem(
@@ -270,26 +270,28 @@ class NutrisiViewModel : ViewModel() {
                     )
                 }
 
-                // Update ViewModel
-                val currentList = _selectedFoods.value ?: mutableListOf()
-                foods.forEach { food ->
-                    if (currentList.none { it.fdcId == food.fdcId }) {
-                        currentList.add(food)
-                    }
-                }
-                _selectedFoods.value = currentList
+                val totalKaloriCloud = (document.getDouble("totalKalori") ?: 0.0).toFloat()
+                val totalProteinCloud = (document.getDouble("totalProtein") ?: 0.0).toFloat()
+                val totalKarboCloud = (document.getDouble("totalKarbo") ?: 0.0).toFloat()
+                val totalLemakCloud = (document.getDouble("totalLemak") ?: 0.0).toFloat()
 
-                // Sync ke lokal juga
+                // ✅ Simpan ke lokal biar next open ga perlu fetch lagi
                 PrefsHelper.simpanKalori(
                     context,
-                    (document.getDouble("totalKalori") ?: 0.0).toFloat(),
-                    (document.getDouble("totalProtein") ?: 0.0).toFloat(),
-                    (document.getDouble("totalKarbo") ?: 0.0).toFloat(),
-                    (document.getDouble("totalLemak") ?: 0.0).toFloat(),
+                    totalKaloriCloud,
+                    totalProteinCloud,
+                    totalKarboCloud,
+                    totalLemakCloud,
                     foods
                 )
 
-                Log.d("FIRESTORE", "Berhasil load ${foods.size} makanan dari cloud")
+                // ✅ Update savedKaloriSaatIni agar sisa target terhitung benar
+                savedKaloriSaatIni = totalKaloriCloud
+
+                // ✅ Set list makanan di ViewModel (replace, bukan tambah)
+                _selectedFoods.value = foods.toMutableList()
+
+                Log.d("FIRESTORE", "Load ${foods.size} makanan dari cloud, total: $totalKaloriCloud kkal")
             }
             .addOnFailureListener { e ->
                 Log.e("FIRESTORE", "Gagal load dari cloud: ${e.message}")

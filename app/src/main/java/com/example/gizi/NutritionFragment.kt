@@ -41,12 +41,28 @@ class NutritionFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        viewModel.initTarget(requireContext())
+        loadExistingData() 
         setupSpinners()
         setupRecyclerViews()
         setupSearchBar()
         setupListeners()
         observeViewModel()
+    }
+
+    private fun loadExistingData() {
+        val ctx = requireContext()
+
+        // Init target kalori dulu
+        viewModel.initTarget(ctx)
+
+        // Load dari lokal (kalau masih ada hari ini)
+        val existingFoods = PrefsHelper.getFoodHistory(ctx)
+        if (existingFoods.isNotEmpty()) {
+            existingFoods.forEach { viewModel.addFood(it) }
+        } else {
+            // Lokal kosong → load dari Firestore (user baru buka app hari ini)
+            viewModel.loadFromFirestore(ctx)
+        }
     }
 
     private fun setupSpinners() {
